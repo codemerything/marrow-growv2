@@ -1,0 +1,291 @@
+import introImage from "../assets/selections/introimagelandscape.png"
+import { useState } from "react"
+import { LogOut } from "lucide-react"
+import UsernameRegistration from "./username-registration"
+import SelectionScreen from "./selection-screen"
+import FeedingStation from "./feeding-station"
+import AudioControls from "./audio-controls"
+import type { GameSelections, User, AudioSettings } from "../types/game-types"
+
+interface GameMenuProps {
+  user: User
+  audioSettings: AudioSettings
+  onAudioChange: (settings: AudioSettings) => void
+  onDisconnectWallet: () => void
+}
+
+export default function GameMenu({ user, audioSettings, onAudioChange, onDisconnectWallet }: GameMenuProps) {
+  const [activeTab, setActiveTab] = useState("start")
+  const [currentScreen, setCurrentScreen] = useState("menu") // "menu", "selection", "feeding", "game"
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [username, setUsername] = useState(user.username)
+  const [isRegistered, setIsRegistered] = useState(user.isRegistered)
+
+  // Game selections state
+  const [gameSelections, setGameSelections] = useState<GameSelections>({
+    seed: null,
+    soil: null,
+    defense: null,
+    feedingSchedule: {
+      sprout: null,
+      vegetative: null,
+      flowering: null,
+    },
+  })
+
+  const menuTabs = [
+    { id: "start", label: "Start Growing", icon: "🌱" },
+    { id: "seedbank", label: "Seed Bank", icon: "🏦" },
+    { id: "howto", label: "How to Play", icon: "❓" },
+    { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
+  ]
+
+  const handleUsernameRegistered = (newUsername: string) => {
+    setUsername(newUsername)
+    setIsRegistered(true)
+  }
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
+
+  const handleScreenTransition = (newScreen: string) => {
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setCurrentScreen(newScreen)
+      setIsTransitioning(false)
+    }, 300)
+  }
+
+  const handleSelectionChange = (type: "seed" | "soil" | "defense", value: string) => {
+    setGameSelections((prev) => ({
+      ...prev,
+      [type]: value,
+    }))
+  }
+
+  const handleFeedingChange = (stage: "sprout" | "vegetative" | "flowering", nutrient: string) => {
+    setGameSelections((prev) => ({
+      ...prev,
+      feedingSchedule: {
+        ...prev.feedingSchedule,
+        [stage]: nutrient,
+      },
+    }))
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "start":
+        if (!isRegistered) {
+          return <UsernameRegistration onUsernameRegistered={handleUsernameRegistered} />
+        }
+
+        return (
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-yellow-300 text-center mb-4">Welcome, {username}!</h3>
+            <p className="text-purple-200 text-sm text-center mb-6">Ready to start your growing adventure?</p>
+            <button
+              onClick={() => handleScreenTransition("selection")}
+              className="w-full bg-purple-700 hover:bg-purple-600 text-yellow-300 font-bold py-3 px-6 rounded border-2 border-purple-500 shadow-lg transform transition-transform hover:scale-105 backdrop-blur-sm"
+            >
+              Play
+            </button>
+          </div>
+        )
+
+      case "seedbank":
+        return (
+          <div className="text-center space-y-4">
+            <h3 className="text-xl font-bold text-yellow-300">Seed Collection</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-purple-900/80 p-4 rounded border border-purple-500 backdrop-blur-sm">
+                <div className="text-2xl mb-2">🌿</div>
+                <div className="text-green-300 text-sm">Indica Seeds: 12</div>
+              </div>
+              <div className="bg-purple-900/80 p-4 rounded border border-purple-500 backdrop-blur-sm">
+                <div className="text-2xl mb-2">🍃</div>
+                <div className="text-green-300 text-sm">Sativa Seeds: 8</div>
+              </div>
+            </div>
+          </div>
+        )
+
+      case "howto":
+        return (
+          <div className="space-y-3">
+            <h3 className="text-xl font-bold text-yellow-300 text-center">How to Play</h3>
+            <div className="text-green-300 text-sm space-y-2">
+              <p>• Connect your Web3 wallet</p>
+              <p>• Register your grower username</p>
+              <p>• Select seed, soil, and defense</p>
+              <p>• Set up feeding schedule</p>
+              <p>• Plant and watch them grow</p>
+              <p>• Harvest and earn rewards</p>
+            </div>
+          </div>
+        )
+
+      case "leaderboard":
+        return (
+          <div className="space-y-3">
+            <h3 className="text-xl font-bold text-yellow-300 text-center">Top Growers</h3>
+            <div className="space-y-2">
+              {[
+                { rank: 1, name: "GreenThumb420", score: 15420 },
+                { rank: 2, name: "PlantMaster", score: 12350 },
+                { rank: 3, name: "BudGuru", score: 9870 },
+              ].map((player) => (
+                <div
+                  key={player.rank}
+                  className="flex justify-between items-center bg-purple-900/80 p-2 rounded border border-purple-500 backdrop-blur-sm"
+                >
+                  <span className="text-yellow-300">#{player.rank}</span>
+                  <span className="text-green-300">{player.name}</span>
+                  <span className="text-white">{player.score.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  const renderCurrentScreen = () => {
+    switch (currentScreen) {
+      case "selection":
+        return (
+          <SelectionScreen
+            selections={gameSelections}
+            onSelectionChange={handleSelectionChange}
+            onNext={() => handleScreenTransition("feeding")}
+            onBack={() => handleScreenTransition("menu")}
+          />
+        )
+      case "feeding":
+        return (
+          <FeedingStation
+            selections={gameSelections}
+            onFeedingChange={handleFeedingChange}
+            onNext={() => handleScreenTransition("game")}
+            onBack={() => handleScreenTransition("selection")}
+          />
+        )
+      case "game":
+        return (
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl font-bold text-yellow-300">Game Starting...</h2>
+            <p className="text-purple-200">Your selections have been saved!</p>
+            <div className="text-left text-sm text-green-300 space-y-1">
+              <p>Seed: {gameSelections.seed}</p>
+              <p>Soil: {gameSelections.soil}</p>
+              <p>Defense: {gameSelections.defense}</p>
+              <p>Sprout Feed: {gameSelections.feedingSchedule.sprout}</p>
+              <p>Veg Feed: {gameSelections.feedingSchedule.vegetative}</p>
+              <p>Flower Feed: {gameSelections.feedingSchedule.flowering}</p>
+            </div>
+          </div>
+        )
+      default:
+        return renderTabContent()
+    }
+  }
+
+  return (
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${introImage})`,
+        }}
+      />
+
+      {/* Dark overlay for better readability */}
+      <div className="absolute inset-0 bg-black/30" />
+
+      <div
+        className={`relative z-10 w-full transition-all duration-300 ${currentScreen === "feeding" ? "max-w-6xl" : currentScreen === "selection" ? "max-w-4xl" : "max-w-md"
+          } ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+      >
+        {currentScreen === "menu" ? (
+          <>
+            {/* Wallet Status Bar */}
+            <div className="mb-4 bg-purple-800/90 rounded-lg border-2 border-purple-600 p-3 backdrop-blur-md flex justify-between items-center">
+              <div className="text-sm">
+                <div className="text-purple-200">Connected:</div>
+                <div className="text-green-300 font-mono">{formatAddress(user.walletAddress)}</div>
+                {isRegistered && <div className="text-yellow-300 text-xs">@{username}</div>}
+              </div>
+              <button
+                onClick={onDisconnectWallet}
+                className="p-2 rounded-full bg-purple-700/80 border border-purple-500 text-purple-200 hover:text-red-300 hover:bg-purple-600/80 transition-colors"
+                title="Disconnect Wallet"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+
+            {/* Main Menu Card */}
+            <div className="bg-gradient-to-b from-purple-800/90 to-purple-900/95 rounded-lg border-4 border-purple-600 shadow-2xl overflow-hidden backdrop-blur-md">
+              {/* Menu Tabs */}
+              <div className="grid grid-cols-2 gap-1 p-2 bg-purple-800/90">
+                {menuTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`p-3 rounded text-sm font-bold transition-all duration-200 backdrop-blur-sm ${activeTab === tab.id
+                      ? "bg-purple-900/90 text-green-300 border-2 border-green-400 shadow-inner"
+                      : "bg-purple-700/80 text-purple-200 border-2 border-purple-500 hover:bg-purple-600/80 hover:text-green-300"
+                      }`}
+                  >
+                    <div className="text-lg mb-1">{tab.icon}</div>
+                    <div className="text-xs">{tab.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Content Area */}
+              <div className="p-6 bg-gradient-to-b from-purple-900/90 to-black/90 min-h-[300px] border-t-4 border-purple-600 backdrop-blur-md">
+                {renderCurrentScreen()}
+              </div>
+
+              {/* Decorative pixel art area - ONLY on menu page */}
+              <div className="h-20 bg-gradient-to-r from-purple-700/90 to-purple-800/90 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute inset-0 flex items-center justify-center space-x-8">
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "0s" }}>
+                    🦴
+                  </div>
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "0.5s" }}>
+                    🌿
+                  </div>
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "1s" }}>
+                    💀
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Other Screens */
+          <div className="bg-gradient-to-b from-purple-800/90 to-purple-900/95 rounded-lg border-4 border-purple-600 shadow-2xl overflow-hidden backdrop-blur-md p-6">
+            {renderCurrentScreen()}
+          </div>
+        )}
+
+        {/* Audio Controls - Persistent across all screens */}
+        <div className="mt-8">
+          <AudioControls audioSettings={audioSettings} onAudioChange={onAudioChange} />
+        </div>
+
+        {/* Footer text */}
+        <div className="text-center mt-4 text-purple-300 text-xs backdrop-blur-sm bg-black/20 rounded px-3 py-1">
+          Marrow Grow • Begin the Ritual
+        </div>
+      </div>
+    </div>
+  )
+}

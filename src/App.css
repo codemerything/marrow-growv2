@@ -1,0 +1,26 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Press Start 2P", system-ui;
+  src: url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+}
+
+@theme {
+  --font-pressstart: "Press Start 2P", system-ui;
+  --color-dark-purple: #181020;
+  --color-dark-purple-overlay: rgba(24, 16, 32, 0.88);
+  --color-dark-gray: #23232b;
+  --color-light-purple: #bfcfff;
+  --color-dark-content-overlay: rgba(24, 20, 26, 0.82);
+  --color-black-shadow: #000b;
+  --color-black-shadow-light: #000a;
+  --color-dark-red: #23141c;
+  --color-light-purple-hover: #9ba8d9;
+}
+
+@layer components {
+  .name-input-screen {
+    @apply fixed inset-0 w-screen h-screen bg-dark-purple-overlay z-[3000] flex items-center justify-center;
+  }
+}
