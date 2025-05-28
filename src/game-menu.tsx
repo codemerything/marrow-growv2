@@ -1,32 +1,30 @@
 import introImage from './assets/selections/introimagelandscape.png'
-import { useState, useEffect } from "react"
-import { LogOut } from "lucide-react"
+
+import { useState } from "react"
+import { Volume2, VolumeX, Music, MicOffIcon as MusicOff, LogOut } from "lucide-react"
+import WalletConnection from "./components/wallet-connection"
 import UsernameRegistration from "./components/username-registration"
 import SelectionScreen from "./components/selection-screen"
 import FeedingStation from "./components/feeding-station"
-import AudioControls from "./components/audio-controls"
-import SeedBankTab from "./components/seed-bank-tab"
-import HarvestTab from "./components/harvest-tab"
-import SpinWheel from "./components/spin-wheel"
-import type { GameSelections, User, AudioSettings } from "./types/game-types"
+import type { GameSelections, User } from "./types/game-types"
 
-interface GameMenuProps {
-  user: User
-  audioSettings: AudioSettings
-  onAudioChange: (settings: AudioSettings) => void
-  onDisconnectWallet: () => void
-}
 
-export default function GameMenu({ user, audioSettings, onAudioChange, onDisconnectWallet }: GameMenuProps) {
+
+
+export default function GameMenu() {
   const [activeTab, setActiveTab] = useState("start")
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [musicEnabled, setMusicEnabled] = useState(true)
   const [currentScreen, setCurrentScreen] = useState("menu") // "menu", "selection", "feeding", "game"
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [username, setUsername] = useState(user.username)
-  const [isRegistered, setIsRegistered] = useState(user.isRegistered)
-  const [lives, setLives] = useState(3) // Daily lives for planting
-  const [showSpinWheel, setShowSpinWheel] = useState(false)
-  const [canSpin, setCanSpin] = useState(true)
-  const [spinResult, setSpinResult] = useState<string | null>(null)
+
+  // User state
+  const [user, setUser] = useState<User>({
+    isWalletConnected: false,
+    walletAddress: "",
+    username: "",
+    isRegistered: false,
+  })
 
   // Game selections state
   const [gameSelections, setGameSelections] = useState<GameSelections>({
@@ -43,49 +41,44 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
   const menuTabs = [
     { id: "start", label: "Start Growing", icon: "🌱" },
     { id: "seedbank", label: "Seed Bank", icon: "🏦" },
-    { id: "harvest", label: "Harvest", icon: "🌿" },
     { id: "howto", label: "How to Play", icon: "❓" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
   ]
 
-  // Load lives and spin status from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedLives = localStorage.getItem(`marrow_grow_lives_${user.walletAddress}`)
-      const lastReset = localStorage.getItem(`marrow_grow_last_reset_${user.walletAddress}`)
-      const lastSpin = localStorage.getItem(`marrow_grow_last_spin_${user.walletAddress}`)
-
-      const today = new Date().toDateString()
-
-      if (lastReset !== today) {
-        // Reset lives to 3 and spin availability for new day
-        setLives(3)
-        setCanSpin(true)
-        localStorage.setItem(`marrow_grow_lives_${user.walletAddress}`, "3")
-        localStorage.setItem(`marrow_grow_last_reset_${user.walletAddress}`, today)
-        localStorage.removeItem(`marrow_grow_last_spin_${user.walletAddress}`)
-      } else {
-        if (savedLives) {
-          setLives(Number.parseInt(savedLives))
-        }
-        if (lastSpin === today) {
-          setCanSpin(false)
-        }
-      }
-    }
-  }, [user.walletAddress])
-
-  // Save lives to localStorage
-  const handleLivesChange = (newLives: number) => {
-    setLives(newLives)
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`marrow_grow_lives_${user.walletAddress}`, newLives.toString())
-    }
+  const handleWalletConnected = (address: string) => {
+    setUser((prev) => ({
+      ...prev,
+      isWalletConnected: true,
+      walletAddress: address,
+    }))
   }
 
-  const handleUsernameRegistered = (newUsername: string) => {
-    setUsername(newUsername)
-    setIsRegistered(true)
+  const handleUsernameRegistered = (username: string) => {
+    setUser((prev) => ({
+      ...prev,
+      username,
+      isRegistered: true,
+    }))
+  }
+
+  const disconnectWallet = () => {
+    setUser({
+      isWalletConnected: false,
+      walletAddress: "",
+      username: "",
+      isRegistered: false,
+    })
+    setGameSelections({
+      seed: null,
+      soil: null,
+      defense: null,
+      feedingSchedule: {
+        sprout: null,
+        vegetative: null,
+        flowering: null,
+      },
+    })
+    setCurrentScreen("menu")
   }
 
   const formatAddress = (address: string) => {
@@ -117,99 +110,57 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
     }))
   }
 
-  const handleStartGrowing = () => {
-    if (lives > 0) {
-      // Don't consume life yet, wait until feeding station
-      handleScreenTransition("selection")
-    }
-  }
-
-  const handleFeedingStationNext = () => {
-    // Consume life when proceeding from feeding station to actual game
-    handleLivesChange(lives - 1)
-    handleScreenTransition("game")
-  }
-
-  const handleSpinWheel = (result: { symbols: string[]; wonLife: boolean }) => {
-    if (result.wonLife) {
-      handleLivesChange(lives + 1)
-      setSpinResult(`You won a life! ${result.symbols.join("")}`)
-    } else {
-      setSpinResult(`No luck this time... ${result.symbols.join("")}`)
-    }
-
-    // Mark spin as used for today
-    setCanSpin(false)
-    if (typeof window !== "undefined") {
-      const today = new Date().toDateString()
-      localStorage.setItem(`marrow_grow_last_spin_${user.walletAddress}`, today)
-    }
-
-    // Clear result after 3 seconds
-    setTimeout(() => {
-      setSpinResult(null)
-    }, 3000)
-  }
-
   const renderTabContent = () => {
     switch (activeTab) {
       case "start":
-        if (!isRegistered) {
+        if (!user.isWalletConnected) {
+          return <WalletConnection onWalletConnected={handleWalletConnected} />
+        }
+
+        if (user.isWalletConnected && !user.isRegistered) {
           return <UsernameRegistration onUsernameRegistered={handleUsernameRegistered} />
         }
 
-        return (
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold text-yellow-300 text-center mb-4">Welcome, {username}!</h3>
-
-            {/* Lives Display */}
-            <div className="bg-purple-900/80 rounded-lg border-2 border-purple-500 p-4 backdrop-blur-sm text-center">
-              <div className="text-green-300 text-lg font-bold mb-1">Lives: {lives}</div>
-              <div className="text-purple-200 text-sm">
-                {lives > 0 ? "Ready to plant!" : "No lives remaining. Try the daily spin!"}
-              </div>
-            </div>
-
-            <p className="text-purple-200 text-sm text-center mb-6">Ready to start your growing adventure?</p>
-
-            <button
-              onClick={handleStartGrowing}
-              disabled={lives === 0}
-              className="w-full bg-purple-700 hover:bg-purple-600 disabled:bg-purple-800 disabled:opacity-50 text-yellow-300 font-bold py-3 px-6 rounded border-2 border-purple-500 shadow-lg transform transition-transform hover:scale-105 backdrop-blur-sm"
-            >
-              {lives > 0 ? "Play" : "No Lives Remaining"}
-            </button>
-
-            {/* Spin Button */}
-            <button
-              onClick={() => setShowSpinWheel(true)}
-              disabled={!canSpin}
-              className="w-full bg-gradient-to-r from-yellow-700 to-orange-700 hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-700 disabled:to-gray-800 disabled:opacity-50 text-yellow-300 font-bold py-3 px-6 rounded border-2 border-yellow-500 shadow-lg transform transition-transform hover:scale-105 backdrop-blur-sm"
-            >
-              {canSpin ? "🎰 Spin for Extra Lives" : "Daily Spin Used"}
-            </button>
-
-            {/* Spin Result */}
-            {spinResult && (
-              <div
-                className={`text-center p-3 rounded border-2 backdrop-blur-sm ${spinResult.includes("won")
-                  ? "bg-green-900/80 border-green-500 text-green-300"
-                  : "bg-red-900/80 border-red-500 text-red-300"
-                  }`}
+        if (user.isWalletConnected && user.isRegistered) {
+          return (
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-yellow-300 text-center mb-4">Welcome, {user.username}!</h3>
+              <p className="text-purple-200 text-sm text-center mb-6">Ready to start your growing adventure?</p>
+              <button
+                onClick={() => handleScreenTransition("selection")}
+                className="w-full bg-purple-700 hover:bg-purple-600 text-yellow-300 font-bold py-3 px-6 rounded border-2 border-purple-500 shadow-lg transform transition-transform hover:scale-105 backdrop-blur-sm"
               >
-                {spinResult}
-              </div>
-            )}
-
-            {!canSpin && <p className="text-purple-300 text-xs text-center">Daily spin resets tomorrow!</p>}
-          </div>
-        )
+                Play
+              </button>
+            </div>
+          )
+        }
+        return null
 
       case "seedbank":
-        return <SeedBankTab user={user} lives={lives} />
-
-      case "harvest":
-        return <HarvestTab user={user} />
+        if (!user.isWalletConnected) {
+          return (
+            <div className="text-center space-y-4">
+              <h3 className="text-xl font-bold text-yellow-300">Seed Collection</h3>
+              <p className="text-purple-200 text-sm">Connect your wallet to view your seed collection</p>
+            </div>
+          )
+        }
+        return (
+          <div className="text-center space-y-4">
+            <h3 className="text-xl font-bold text-yellow-300">Seed Collection</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-purple-900/80 p-4 rounded border border-purple-500 backdrop-blur-sm">
+                <div className="text-2xl mb-2">🌿</div>
+                <div className="text-green-300 text-sm">Indica Seeds: 12</div>
+              </div>
+              <div className="bg-purple-900/80 p-4 rounded border border-purple-500 backdrop-blur-sm">
+                <div className="text-2xl mb-2">🍃</div>
+                <div className="text-green-300 text-sm">Sativa Seeds: 8</div>
+              </div>
+            </div>
+          </div>
+        )
 
       case "howto":
         return (
@@ -218,14 +169,10 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
             <div className="text-green-300 text-sm space-y-2">
               <p>• Connect your Web3 wallet</p>
               <p>• Register your grower username</p>
-              <p>• You get 3 lives daily to plant seeds</p>
               <p>• Select seed, soil, and defense</p>
               <p>• Set up feeding schedule</p>
-              <p>• Lives are consumed when you start growing</p>
               <p>• Plant and watch them grow</p>
               <p>• Harvest and earn rewards</p>
-              <p>• Get one daily spin for extra lives</p>
-              <p>• Win with 🦴🌿 combinations (no 💀)</p>
             </div>
           </div>
         )
@@ -274,7 +221,7 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
           <FeedingStation
             selections={gameSelections}
             onFeedingChange={handleFeedingChange}
-            onNext={handleFeedingStationNext}
+            onNext={() => handleScreenTransition("game")}
             onBack={() => handleScreenTransition("selection")}
           />
         )
@@ -291,7 +238,6 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
               <p>Veg Feed: {gameSelections.feedingSchedule.vegetative}</p>
               <p>Flower Feed: {gameSelections.feedingSchedule.flowering}</p>
             </div>
-            <p className="text-yellow-300 text-sm">Life consumed! {lives} lives remaining.</p>
           </div>
         )
       default:
@@ -319,53 +265,34 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
         {currentScreen === "menu" ? (
           <>
             {/* Wallet Status Bar */}
-            <div className="mb-4 bg-purple-800/90 rounded-lg border-2 border-purple-600 p-3 backdrop-blur-md flex justify-between items-center">
-              <div className="text-sm">
-                <div className="text-purple-200">Connected:</div>
-                <div className="text-green-300 font-mono">{formatAddress(user.walletAddress)}</div>
-                {isRegistered && <div className="text-yellow-300 text-xs">@{username}</div>}
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right text-sm">
-                  <div className="text-purple-200">Lives:</div>
-                  <div className="text-green-300 font-bold">{lives}</div>
+            {user.isWalletConnected && (
+              <div className="mb-4 bg-purple-800/90 rounded-lg border-2 border-purple-600 p-3 backdrop-blur-md flex justify-between items-center">
+                <div className="text-sm">
+                  <div className="text-purple-200">Connected:</div>
+                  <div className="text-green-300 font-mono">{formatAddress(user.walletAddress)}</div>
+                  {user.isRegistered && <div className="text-yellow-300 text-xs">@{user.username}</div>}
                 </div>
                 <button
-                  onClick={onDisconnectWallet}
+                  onClick={disconnectWallet}
                   className="p-2 rounded-full bg-purple-700/80 border border-purple-500 text-purple-200 hover:text-red-300 hover:bg-purple-600/80 transition-colors"
                   title="Disconnect Wallet"
                 >
                   <LogOut size={16} />
                 </button>
               </div>
-            </div>
+            )}
 
             {/* Main Menu Card */}
             <div className="bg-gradient-to-b from-purple-800/90 to-purple-900/95 rounded-lg border-4 border-purple-600 shadow-2xl overflow-hidden backdrop-blur-md">
-              {/* Menu Tabs - Now 5 tabs in a grid */}
-              <div className="grid grid-cols-3 gap-1 p-2 bg-purple-800/90">
-                {menuTabs.slice(0, 3).map((tab) => (
+              {/* Menu Tabs */}
+              <div className="grid grid-cols-2 gap-1 p-2 bg-purple-800/90">
+                {menuTabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`p-3 rounded text-sm font-bold transition-all duration-200 backdrop-blur-sm ${activeTab === tab.id
-                      ? "bg-purple-900/90 text-green-300 border-2 border-green-400 shadow-inner"
-                      : "bg-purple-700/80 text-purple-200 border-2 border-purple-500 hover:bg-purple-600/80 hover:text-green-300"
-                      }`}
-                  >
-                    <div className="text-lg mb-1">{tab.icon}</div>
-                    <div className="text-xs">{tab.label}</div>
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-1 px-2 pb-2 bg-purple-800/90">
-                {menuTabs.slice(3).map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`p-3 rounded text-sm font-bold transition-all duration-200 backdrop-blur-sm ${activeTab === tab.id
-                      ? "bg-purple-900/90 text-green-300 border-2 border-green-400 shadow-inner"
-                      : "bg-purple-700/80 text-purple-200 border-2 border-purple-500 hover:bg-purple-600/80 hover:text-green-300"
+                        ? "bg-purple-900/90 text-green-300 border-2 border-green-400 shadow-inner"
+                        : "bg-purple-700/80 text-purple-200 border-2 border-purple-500 hover:bg-purple-600/80 hover:text-green-300"
                       }`}
                   >
                     <div className="text-lg mb-1">{tab.icon}</div>
@@ -378,6 +305,21 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
               <div className="p-6 bg-gradient-to-b from-purple-900/90 to-black/90 min-h-[300px] border-t-4 border-purple-600 backdrop-blur-md">
                 {renderCurrentScreen()}
               </div>
+
+              {/* Decorative pixel art area */}
+              <div className="h-20 bg-gradient-to-r from-purple-700/90 to-purple-800/90 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute inset-0 flex items-center justify-center space-x-8">
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "0s" }}>
+                    🦴
+                  </div>
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "0.5s" }}>
+                    🌿
+                  </div>
+                  <div className="text-4xl animate-bounce" style={{ animationDelay: "1s" }}>
+                    💀
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         ) : (
@@ -387,9 +329,29 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
           </div>
         )}
 
-        {/* Audio Controls - Persistent across all screens */}
-        <div className="mt-8">
-          <AudioControls audioSettings={audioSettings} onAudioChange={onAudioChange} />
+        {/* Audio Controls */}
+        <div className="flex justify-center space-x-4 mt-6">
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`p-3 rounded-full border-2 transition-all duration-200 backdrop-blur-sm ${soundEnabled
+                ? "bg-purple-700/90 border-purple-500 text-yellow-300 hover:bg-purple-600/90"
+                : "bg-purple-900/80 border-purple-700 text-purple-400 hover:bg-purple-800/80"
+              }`}
+            title={soundEnabled ? "Sound On" : "Sound Off"}
+          >
+            {soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+          </button>
+
+          <button
+            onClick={() => setMusicEnabled(!musicEnabled)}
+            className={`p-3 rounded-full border-2 transition-all duration-200 backdrop-blur-sm ${musicEnabled
+                ? "bg-purple-700/90 border-purple-500 text-yellow-300 hover:bg-purple-600/90"
+                : "bg-purple-900/80 border-purple-700 text-purple-400 hover:bg-purple-800/80"
+              }`}
+            title={musicEnabled ? "Music On" : "Music Off"}
+          >
+            {musicEnabled ? <Music size={24} /> : <MusicOff size={24} />}
+          </button>
         </div>
 
         {/* Footer text */}
@@ -397,11 +359,6 @@ export default function GameMenu({ user, audioSettings, onAudioChange, onDisconn
           Marrow Grow • Begin the Ritual
         </div>
       </div>
-
-      {/* Spin Wheel Modal */}
-      {showSpinWheel && (
-        <SpinWheel onSpin={handleSpinWheel} onClose={() => setShowSpinWheel(false)} canSpin={canSpin} />
-      )}
     </div>
   )
 }

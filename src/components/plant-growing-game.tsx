@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { AlertTriangle } from "lucide-react"
+import cryptCookiesImg from '../assets/seeds/testmillion.png';
+import skeleSkittlezImg from '../assets/seeds/seedmillion2.png';
+import boneBlossomImg from '../assets/seeds/seed.png';
 
 // Game configuration constants
 const GAME_CONFIG = {
@@ -24,21 +27,21 @@ const SEED_PROPERTIES = {
     name: "Crypt Cookies",
     waterDrain: 0.6,
     nutrientDrain: 0.5,
-    image: "/seeds/testmillion.png",
+    image: cryptCookiesImg,
     desc: "Balanced, classic strain.",
   },
   "skele-skittlez": {
     name: "Skele Skittlez",
     waterDrain: 0.5,
     nutrientDrain: 0.7,
-    image: "/seeds/seedmillion2.png",
+    image: skeleSkittlezImg,
     desc: "Potent, nutrient-hungry.",
   },
   "bone-blossom": {
     name: "Bone Blossom",
     waterDrain: 0.7,
     nutrientDrain: 0.6,
-    image: "/seeds/seed.png",
+    image: boneBlossomImg,
     desc: "Unpredictable, mid stats.",
   },
 }
@@ -225,7 +228,7 @@ export default function PlantGrowingGame({ selections, onGameComplete, onBack }:
         // **RESOURCE DRAIN LOGIC**
         // Calculate drain rates based on seed and soil properties
         if (newState.seedType && newState.soilType) {
-          const seed = SEED_PROPERTIES[newState.seedType as keyof typeof SEED_PROPERTIES]
+          // const seed = SEED_PROPERTIES[newState.seedType as keyof typeof SEED_PROPERTIES]
           const soil = SOIL_TYPES[newState.soilType as keyof typeof SOIL_TYPES]
 
           // Water drains based on soil properties
