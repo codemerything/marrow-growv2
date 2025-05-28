@@ -1,3 +1,4 @@
+import introImage from '../assets/selections/introimagelandscape.png'
 
 import { useState } from "react"
 import { Wallet, AlertCircle, ExternalLink } from "lucide-react"
@@ -78,7 +79,7 @@ export default function ConnectWalletPage({ audioSettings, onAudioChange, onWall
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{
-                    backgroundImage: "url('/marrow-grow-artwork.png')",
+                    backgroundImage: `url(${introImage})`,
                 }}
             />
 
@@ -87,26 +88,7 @@ export default function ConnectWalletPage({ audioSettings, onAudioChange, onWall
 
             <div className="relative z-10 w-full max-w-md">
                 {/* Game Title */}
-                <div className="text-center mb-12">
-                    <h1
-                        className="text-6xl font-bold text-yellow-300 mb-2 drop-shadow-lg"
-                        style={{
-                            textShadow: "3px 3px 0px #8B4513, 6px 6px 0px rgba(0,0,0,0.5)",
-                            fontFamily: "serif",
-                        }}
-                    >
-                        MARROW
-                    </h1>
-                    <h1
-                        className="text-6xl font-bold text-yellow-300 drop-shadow-lg"
-                        style={{
-                            textShadow: "3px 3px 0px #8B4513, 6px 6px 0px rgba(0,0,0,0.5)",
-                            fontFamily: "serif",
-                        }}
-                    >
-                        GROW
-                    </h1>
-                </div>
+
 
                 {/* Connect Wallet Card */}
                 <div className="bg-gradient-to-b from-purple-700/95 to-purple-900/95 rounded-lg border-4 border-purple-500 shadow-2xl overflow-hidden backdrop-blur-md p-8">
